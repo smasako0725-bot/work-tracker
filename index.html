@@ -615,6 +615,7 @@ function toggleTag(t) {
 
 // ---- DIALOG ----
 function showDialog() {
+  sendDone = false;
   const r = pendingRecord;
   document.getElementById('dialog-info').innerHTML = `
     <b>${r.date}</b><br>
