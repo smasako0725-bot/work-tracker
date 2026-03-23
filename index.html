@@ -670,7 +670,12 @@ async function sendRecord() {
 
   btn.textContent = '完了 → 閉じる';
   btn.disabled = false;
-  btn.onclick = () => { closeDialog(); resetTimer(); };
+  btn.onclick = () => { cbtn.addEventListener('click', function done() {
+    btn.removeEventListener('click', done);
+    btn.textContent = 'スプシに送信';
+    closeDialog();
+    resetTimer();
+  }, {once: true});loseDialog(); resetTimer(); };
 }
 
 // ---- HISTORY ----
