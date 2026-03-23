@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="作業記録">
+<title>作業記録タイマー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --text: #1a1a18;
+    --text2: #6b6a64;
+    --text3: #9e9d97;
+    --border: rgba(0,0,0,0.1);
+    --accent: #1d5c3a;
+    --accent-light: #e1f5ee;
+    --accent-mid: #0f6e56;
+    --danger: #a32d2d;
+    --danger-light: #fcebeb;
+    --amber: #ba7517;
+    --amber-light: #faeeda;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --surface: #252523;
+      --surface2: #2e2e2b;
+      --text: #e8e7e0;
+      --text2: #a0a098;
+      --text3: #6b6a64;
+      --border: rgba(255,255,255,0.1);
+      --accent: #5dcaa5;
+      --accent-light: #04342c;
+      --accent-mid: #1d9e75;
+      --danger: #f09595;
+      --danger-light: #501313;
+      --amber: #ef9f27;
+      --amber-light: #412402;
+    }
+  }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+  }
+
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+  }
+  .nav-btn {
+    flex: 1; padding: 14px 0;
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; color: var(--text2);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn .nav-icon { font-size: 20px; }
+  .nav-btn.active .nav-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Screens */
+  .screen { display: none; padding: 20px 16px; }
+  .screen.active { display: block; }
+
+  /* Timer screen */
+  .timer-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .timer-status {
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 12px;
+  }
+  .timer-display {
+    font-size: 56px; font-weight: 300; letter-spacing: -2px;
+    color: var(--text); font-variant-numeric: tabular-nums;
+    margin-bottom: 4px;
+  }
+  .timer-amount {
+    font-size: 18px; color: var(--accent); font-weight: 500;
+    margin-bottom: 20px; min-height: 26px;
+  }
+  .btn-row { display: flex; gap: 10px; justify-content: center; }
+  .btn {
+    padding: 12px 24px; border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border);
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+    padding: 14px 32px; font-size: 16px;
+  }
+  .btn-pause {
+    background: var(--amber-light); color: var(--amber); border-color: var(--amber-light);
+  }
+  .btn-stop {
+    background: var(--danger-light); color: var(--danger); border-color: var(--danger-light);
+  }
+  .btn-ghost {
+    background: var(--surface2); color: var(--text2);
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 12px; color: var(--text3); letter-spacing: 0.06em;
+    margin-bottom: 8px; padding: 0 2px;
+  }
+
+  /* Tags */
+  .tags-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    padding: 7px 14px; border-radius: 20px;
+    border: 0.5px solid var(--border);
+    background: var(--surface2);
+    font-size: 14px; color: var(--text2);
+    cursor: pointer; transition: all 0.12s;
+  }
+  .tag.selected {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Memo */
+  .memo-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .memo-input {
+    width: 100%; border: none; outline: none;
+    background: none; font-size: 15px; color: var(--text);
+    resize: none; line-height: 1.6;
+    font-family: inherit;
+    min-height: 72px;
+  }
+  .memo-input::placeholder { color: var(--text3); }
+
+  /* History */
+  .month-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .month-title { font-size: 16px; font-weight: 500; }
+  .month-total {
+    font-size: 13px; color: var(--text2);
+  }
+  .month-btn {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 6px 14px;
+    font-size: 14px; cursor: pointer; color: var(--text);
+  }
+  .record-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .record-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .record-date { font-size: 14px; font-weight: 500; }
+  .record-amount { font-size: 16px; font-weight: 500; color: var(--accent); }
+  .record-time { font-size: 13px; color: var(--text2); }
+  .record-tags {
+    display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 4px;
+  }
+  .record-tag {
+    font-size: 12px; padding: 3px 10px;
+    background: var(--accent-light); color: var(--accent);
+    border-radius: 12px;
+  }
+  .record-memo { font-size: 13px; color: var(--text2); }
+  .record-del {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 0.5px solid var(--border);
+    text-align: right;
+  }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; color: var(--danger); padding: 4px 0;
+  }
+  .summary-bar {
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--accent);
+    padding: 14px 16px;
+    display: flex; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .summary-item { text-align: center; }
+  .summary-val { font-size: 20px; font-weight: 500; color: var(--accent); }
+  .summary-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Settings */
+  .setting-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .setting-title { font-size: 14px; font-weight: 500; margin-bottom: 14px; }
+  .setting-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .setting-label { font-size: 14px; color: var(--text2); flex: 0 0 60px; }
+  .setting-input {
+    flex: 1; padding: 9px 12px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text);
+    font-size: 15px; font-family: inherit;
+  }
+  .setting-input:focus { outline: 2px solid var(--accent); }
+  .gas-input {
+    width: 100%; padding: 9px 12px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text);
+    font-size: 13px; font-family: monospace;
+    margin-bottom: 10px;
+  }
+  .gas-input:focus { outline: 2px solid var(--accent); }
+  .save-btn {
+    width: 100%; padding: 12px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 500; cursor: pointer;
+  }
+  .save-btn:active { opacity: 0.8; }
+  .tag-manage { display: flex; flex-direction: column; gap: 8px; }
+  .tag-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tag-name {
+    flex: 1; padding: 8px 12px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text);
+    font-size: 14px; font-family: inherit;
+  }
+  .tag-del-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--danger-light); color: var(--danger);
+    border: none; cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tag-add-btn {
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    background: var(--surface2); color: var(--text2);
+    border: 0.5px dashed var(--border);
+    font-size: 14px; cursor: pointer; width: 100%;
+    margin-top: 4px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg);
+    padding: 10px 20px; border-radius: 20px;
+    font-size: 14px; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s; z-index: 200;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Confirm dialog */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 300;
+    align-items: flex-end; justify-content: center;
+  }
+  .overlay.show { display: flex; }
+  .dialog {
+    background: var(--surface);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 24px 20px 40px;
+    width: 100%; max-width: 480px;
+  }
+  .dialog h3 { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+  .dialog-info {
+    background: var(--surface2); border-radius: var(--radius-sm);
+    padding: 14px; margin: 14px 0; font-size: 14px; color: var(--text2);
+    line-height: 1.8;
+  }
+  .dialog-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .dialog-btns .btn { flex: 1; text-align: center; }
+
+  .empty { text-align: center; color: var(--text3); padding: 40px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showScreen('timer')" id="nav-timer">
+    <span class="nav-icon">⏱</span>
+    <span>タイマー</span>
+    <span class="nav-dot"></span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('history')" id="nav-history">
+    <span class="nav-icon">📋</span>
+    <span>履歴</span>
+    <span class="nav-dot" style="opacity:0"></span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('settings')" id="nav-settings">
+    <span class="nav-icon">⚙️</span>
+    <span>設定</span>
+    <span class="nav-dot" style="opacity:0"></span>
+  </button>
+</nav>
+
+<!-- TIMER SCREEN -->
+<div class="screen active" id="screen-timer">
+  <div class="timer-card">
+    <div class="timer-status" id="timer-status">待機中</div>
+    <div class="timer-display" id="timer-display">00:00:00</div>
+    <div class="timer-amount" id="timer-amount"></div>
+    <div class="btn-row" id="timer-btns">
+      <button class="btn btn-primary" onclick="startTimer()">開始</button>
+    </div>
+  </div>
+
+  <div class="section-label">作業内容</div>
+  <div class="tags-card">
+    <div class="tags-wrap" id="tags-wrap"></div>
+  </div>
+
+  <div class="section-label">メモ</div>
+  <div class="memo-card">
+    <textarea class="memo-input" id="memo-input" placeholder="作業の詳細・備考を入力"></textarea>
+  </div>
+</div>
+
+<!-- HISTORY SCREEN -->
+<div class="screen" id="screen-history">
+  <div class="month-nav">
+    <button class="month-btn" onclick="changeMonth(-1)">◀</button>
+    <div>
+      <div class="month-title" id="month-title"></div>
+    </div>
+    <button class="month-btn" onclick="changeMonth(1)">▶</button>
+  </div>
+  <div class="summary-bar" id="summary-bar" style="display:none">
+    <div class="summary-item">
+      <div class="summary-val" id="sum-count">0</div>
+      <div class="summary-lbl">訪問回数</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val" id="sum-hours">0h</div>
+      <div class="summary-lbl">合計時間</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-val" id="sum-amount">¥0</div>
+      <div class="summary-lbl">合計金額</div>
+    </div>
+  </div>
+  <div id="history-list"></div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="screen-settings">
+  <div class="setting-card">
+    <div class="setting-title">時給設定</div>
+    <div class="setting-row">
+      <span class="setting-label">時給</span>
+      <input class="setting-input" type="number" id="hourly-rate" placeholder="2000" value="">
+      <span style="font-size:14px;color:var(--text2)">円/時</span>
+    </div>
+    <button class="save-btn" onclick="saveHourlyRate()">保存</button>
+  </div>
+
+  <div class="setting-card">
+    <div class="setting-title">作業タグ管理</div>
+    <div class="tag-manage" id="tag-manage"></div>
+    <button class="tag-add-btn" onclick="addTag()">＋ タグを追加</button>
+  </div>
+
+  <div class="setting-card">
+    <div class="setting-title">Google スプレッドシート連携</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+      GAS をデプロイして取得したURLを貼り付けてください
+    </div>
+    <input class="gas-input" type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." value="">
+    <button class="save-btn" onclick="saveGasUrl()">URLを保存</button>
+  </div>
+
+  <div class="setting-card" style="background:var(--amber-light);border-color:var(--amber)">
+    <div class="setting-title" style="color:var(--amber)">GASセットアップ手順</div>
+    <ol style="font-size:13px;color:var(--text2);line-height:2;padding-left:18px">
+      <li>Googleスプレッドシートを新規作成</li>
+      <li>「拡張機能」→「Apps Script」を開く</li>
+      <li>提供されたGASコードを貼り付けて保存</li>
+      <li>「デプロイ」→「新しいデプロイ」→種類:ウェブアプリ</li>
+      <li>アクセスできるユーザー:「全員」に設定</li>
+      <li>デプロイして表示されるURLをここに貼る</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="overlay" id="confirm-overlay">
+  <div class="dialog">
+    <h3>記録を完了する</h3>
+    <div class="dialog-info" id="dialog-info"></div>
+    <div id="dialog-send-status" style="font-size:13px;color:var(--text2);text-align:center;min-height:20px"></div>
+    <div class="dialog-btns">
+      <button class="btn btn-ghost" onclick="closeDialog()">キャンセル</button>
+      <button class="btn btn-primary" id="dialog-send-btn" onclick="sendRecord()">スプシに送信</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEYS = {
+  tags: 'wt_tags',
+  rate: 'wt_rate',
+  gasUrl: 'wt_gasurl',
+  records: 'wt_records'
+};
+
+// State
+let timerState = 'idle'; // idle | running | paused
+let startTime = null;
+let pausedMs = 0;
+let pauseStart = null;
+let timerInterval = null;
+let pendingRecord = null;
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+
+// Data
+let tags = JSON.parse(localStorage.getItem(STORAGE_KEYS.tags) || '["補助申請","写真整理","書類作成","打合せ","見積確認","その他"]');
+let hourlyRate = parseInt(localStorage.getItem(STORAGE_KEYS.rate) || '2000');
+let gasUrl = localStorage.getItem(STORAGE_KEYS.gasUrl) || '';
+let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.records) || '[]');
+let selectedTags = [];
+
+function save(key, val) {
+  localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+}
+
+// ---- SCREEN NAV ----
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.remove('active');
+    b.querySelector('.nav-dot').style.opacity = '0';
+  });
+  document.getElementById('screen-' + name).classList.add('active');
+  const nb = document.getElementById('nav-' + name);
+  nb.classList.add('active');
+  nb.querySelector('.nav-dot').style.opacity = '1';
+  if (name === 'history') renderHistory();
+  if (name === 'settings') renderSettings();
+}
+
+// ---- TIMER ----
+function getElapsedMs() {
+  if (!startTime) return 0;
+  const base = Date.now() - startTime - pausedMs;
+  return Math.max(0, base);
+}
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function formatHours(ms) {
+  return (ms / 3600000).toFixed(2);
+}
+
+function calcAmount(ms) {
+  const h = ms / 3600000;
+  return Math.round(h * hourlyRate);
+}
+
+function updateDisplay() {
+  const ms = getElapsedMs();
+  document.getElementById('timer-display').textContent = formatTime(ms);
+  if (timerState !== 'idle') {
+    const amt = calcAmount(ms);
+    document.getElementById('timer-amount').textContent = '¥' + amt.toLocaleString();
+  }
+}
+
+function startTimer() {
+  startTime = Date.now();
+  pausedMs = 0;
+  timerState = 'running';
+  timerInterval = setInterval(updateDisplay, 1000);
+  renderTimerBtns();
+  document.getElementById('timer-status').textContent = '計測中';
+}
+
+function pauseTimer() {
+  if (timerState === 'running') {
+    pauseStart = Date.now();
+    timerState = 'paused';
+    clearInterval(timerInterval);
+    document.getElementById('timer-status').textContent = '一時停止中';
+    renderTimerBtns();
+  } else if (timerState === 'paused') {
+    pausedMs += Date.now() - pauseStart;
+    pauseStart = null;
+    timerState = 'running';
+    timerInterval = setInterval(updateDisplay, 1000);
+    document.getElementById('timer-status').textContent = '計測中';
+    renderTimerBtns();
+  }
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  const ms = getElapsedMs();
+  const now = new Date();
+  const start = new Date(startTime);
+  pendingRecord = {
+    date: `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`,
+    startTime: `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`,
+    endTime: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
+    totalHours: parseFloat(formatHours(ms)),
+    tags: selectedTags.join('・'),
+    memo: document.getElementById('memo-input').value.trim(),
+    amount: calcAmount(ms)
+  };
+  showDialog();
+}
+
+function renderTimerBtns() {
+  const el = document.getElementById('timer-btns');
+  if (timerState === 'running') {
+    el.innerHTML = `
+      <button class="btn btn-pause" onclick="pauseTimer()">一時停止</button>
+      <button class="btn btn-stop" onclick="stopTimer()">終了</button>`;
+  } else if (timerState === 'paused') {
+    el.innerHTML = `
+      <button class="btn btn-primary" onclick="pauseTimer()">再開</button>
+      <button class="btn btn-stop" onclick="stopTimer()">終了</button>`;
+  } else {
+    el.innerHTML = `<button class="btn btn-primary" onclick="startTimer()">開始</button>`;
+  }
+}
+
+function resetTimer() {
+  timerState = 'idle';
+  startTime = null; pausedMs = 0; pauseStart = null;
+  clearInterval(timerInterval);
+  document.getElementById('timer-display').textContent = '00:00:00';
+  document.getElementById('timer-amount').textContent = '';
+  document.getElementById('timer-status').textContent = '待機中';
+  document.getElementById('memo-input').value = '';
+  selectedTags = [];
+  renderTags();
+  renderTimerBtns();
+}
+
+// ---- TAGS ----
+function renderTags() {
+  const wrap = document.getElementById('tags-wrap');
+  wrap.innerHTML = tags.map(t => `
+    <span class="tag ${selectedTags.includes(t) ? 'selected' : ''}" onclick="toggleTag('${t.replace(/'/g,"&#39;")}')">${t}</span>
+  `).join('');
+}
+
+function toggleTag(t) {
+  if (selectedTags.includes(t)) {
+    selectedTags = selectedTags.filter(x => x !== t);
+  } else {
+    selectedTags.push(t);
+  }
+  renderTags();
+}
+
+// ---- DIALOG ----
+function showDialog() {
+  const r = pendingRecord;
+  document.getElementById('dialog-info').innerHTML = `
+    <b>${r.date}</b><br>
+    ${r.startTime} → ${r.endTime}　（${r.totalHours}h）<br>
+    ${r.tags ? '作業: ' + r.tags + '<br>' : ''}
+    ${r.memo ? 'メモ: ' + r.memo + '<br>' : ''}
+    <b style="color:var(--accent)">¥${r.amount.toLocaleString()}</b>
+  `;
+  document.getElementById('dialog-send-status').textContent = '';
+  document.getElementById('dialog-send-btn').textContent = 'スプシに送信';
+  document.getElementById('dialog-send-btn').disabled = false;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+
+function closeDialog() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+
+async function sendRecord() {
+  const btn = document.getElementById('dialog-send-btn');
+  const status = document.getElementById('dialog-send-status');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+
+  // ローカル保存
+  const rec = { ...pendingRecord, id: Date.now() };
+  records.push(rec);
+  save(STORAGE_KEYS.records, records);
+
+  // GAS送信
+  if (gasUrl) {
+    try {
+      status.textContent = 'スプレッドシートに書き込み中...';
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'addRecord', ...pendingRecord })
+      });
+      const data = await res.json();
+      if (data.success) {
+        rec.rowIndex = data.rowIndex;
+        save(STORAGE_KEYS.records, records);
+        status.textContent = '✓ スプシに送信しました';
+      } else {
+        status.textContent = '⚠ 送信失敗（ローカルに保存済み）';
+      }
+    } catch(e) {
+      status.textContent = '⚠ 通信エラー（ローカルに保存済み）';
+    }
+  } else {
+    status.textContent = 'ローカルに保存しました（GAS URL未設定）';
+  }
+
+  btn.textContent = '完了 → 閉じる';
+  btn.disabled = false;
+  btn.onclick = () => { closeDialog(); resetTimer(); };
+}
+
+// ---- HISTORY ----
+function renderHistory() {
+  document.getElementById('month-title').textContent = `${currentYear}年${currentMonth}月`;
+  const filtered = records.filter(r => {
+    const prefix = `${currentYear}/${String(currentMonth).padStart(2,'0')}`;
+    return r.date && r.date.startsWith(prefix);
+  });
+
+  const sumBar = document.getElementById('summary-bar');
+  if (filtered.length > 0) {
+    sumBar.style.display = 'flex';
+    const totalH = filtered.reduce((s,r) => s + (r.totalHours || 0), 0);
+    const totalA = filtered.reduce((s,r) => s + (r.amount || 0), 0);
+    document.getElementById('sum-count').textContent = filtered.length;
+    document.getElementById('sum-hours').textContent = totalH.toFixed(1) + 'h';
+    document.getElementById('sum-amount').textContent = '¥' + totalA.toLocaleString();
+  } else {
+    sumBar.style.display = 'none';
+  }
+
+  const list = document.getElementById('history-list');
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">この月の記録はありません</div>';
+    return;
+  }
+  list.innerHTML = filtered.slice().reverse().map(r => `
+    <div class="record-card">
+      <div class="record-head">
+        <div>
+          <div class="record-date">${r.date}</div>
+          <div class="record-time">${r.startTime} → ${r.endTime}　${r.totalHours}h</div>
+        </div>
+        <div class="record-amount">¥${(r.amount||0).toLocaleString()}</div>
+      </div>
+      ${r.tags ? `<div class="record-tags">${r.tags.split('・').map(t=>`<span class="record-tag">${t}</span>`).join('')}</div>` : ''}
+      ${r.memo ? `<div class="record-memo">${r.memo}</div>` : ''}
+      <div class="record-del">
+        <button class="del-btn" onclick="deleteRecord(${r.id})">削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteRecord(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const rec = records.find(r => r.id === id);
+  records = records.filter(r => r.id !== id);
+  save(STORAGE_KEYS.records, records);
+
+  if (gasUrl && rec && rec.rowIndex) {
+    try {
+      await fetch(gasUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteRecord', rowIndex: rec.rowIndex })
+      });
+    } catch(e) {}
+  }
+  renderHistory();
+  showToast('削除しました');
+}
+
+function changeMonth(d) {
+  currentMonth += d;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  renderHistory();
+}
+
+// ---- SETTINGS ----
+function renderSettings() {
+  document.getElementById('hourly-rate').value = hourlyRate;
+  document.getElementById('gas-url').value = gasUrl;
+  renderTagManage();
+}
+
+function renderTagManage() {
+  const el = document.getElementById('tag-manage');
+  el.innerHTML = tags.map((t, i) => `
+    <div class="tag-row">
+      <input class="tag-name" type="text" value="${t}" onchange="updateTag(${i}, this.value)">
+      <button class="tag-del-btn" onclick="removeTag(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function updateTag(i, val) {
+  tags[i] = val;
+  save(STORAGE_KEYS.tags, tags);
+  renderTags();
+}
+
+function removeTag(i) {
+  tags.splice(i, 1);
+  save(STORAGE_KEYS.tags, tags);
+  renderTagManage();
+  renderTags();
+}
+
+function addTag() {
+  tags.push('新しいタグ');
+  save(STORAGE_KEYS.tags, tags);
+  renderTagManage();
+  renderTags();
+  const inputs = document.querySelectorAll('.tag-name');
+  const last = inputs[inputs.length - 1];
+  if (last) { last.focus(); last.select(); }
+}
+
+function saveHourlyRate() {
+  const v = parseInt(document.getElementById('hourly-rate').value);
+  if (isNaN(v) || v < 0) { showToast('正しい金額を入力してください'); return; }
+  hourlyRate = v;
+  localStorage.setItem(STORAGE_KEYS.rate, String(v));
+  if (gasUrl) {
+    fetch(gasUrl, { method: 'POST', body: JSON.stringify({ action: 'saveHourlyRate', hourlyRate: v }) }).catch(()=>{});
+  }
+  showToast('時給を保存しました');
+}
+
+function saveGasUrl() {
+  gasUrl = document.getElementById('gas-url').value.trim();
+  localStorage.setItem(STORAGE_KEYS.gasUrl, gasUrl);
+  showToast('URLを保存しました');
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Init
+renderTags();
+renderTimerBtns();
+</script>
+</body>
+</html>
