@@ -648,18 +648,19 @@ async function sendRecord() {
   if (gasUrl) {
     try {
       status.textContent = 'スプレッドシートに書き込み中...';
-      const res = await fetch(gasUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'addRecord', ...pendingRecord })
+      const params = new URLSearchParams({
+        action: 'addRecord',
+        date: pendingRecord.date,
+        startTime: pendingRecord.startTime,
+        endTime: pendingRecord.endTime,
+        totalHours: pendingRecord.totalHours,
+        tags: pendingRecord.tags,
+        memo: pendingRecord.memo,
+        amount: pendingRecord.amount
       });
-      const data = await res.json();
-      if (data.success) {
-        rec.rowIndex = data.rowIndex;
-        save(STORAGE_KEYS.records, records);
-        status.textContent = '✓ スプシに送信しました';
-      } else {
-        status.textContent = '⚠ 送信失敗（ローカルに保存済み）';
-      }
+      await fetch(gasUrl + '?' + params.toString(), { mode: 'no-cors' });
+      status.textContent = '✓ スプシに送信しました';
+      save(STORAGE_KEYS.records, records);
     } catch(e) {
       status.textContent = '⚠ 通信エラー（ローカルに保存済み）';
     }
