@@ -441,7 +441,7 @@
     <div id="dialog-send-status" style="font-size:13px;color:var(--text2);text-align:center;min-height:20px"></div>
     <div class="dialog-btns">
       <button class="btn btn-ghost" onclick="closeDialog()">キャンセル</button>
-      <button class="btn btn-primary" id="dialog-send-btn">スプシに送信</button>
+      <button class="btn btn-primary" id="dialog-send-btn" onclick="sendRecord()">スプシに送信</button>
     </div>
   </div>
 </div>
@@ -668,14 +668,9 @@ async function sendRecord() {
     status.textContent = 'ローカルに保存しました（GAS URL未設定）';
   }
 
-  btn.textContent = '完了 → 閉じる';
+ btn.textContent = '完了 → 閉じる';
   btn.disabled = false;
-  btn.onclick = () => { cbtn.addEventListener('click', function done() {
-    btn.removeEventListener('click', done);
-    btn.textContent = 'スプシに送信';
-    closeDialog();
-    resetTimer();
-  }, {once: true});loseDialog(); resetTimer(); };
+  setTimeout(() => { closeDialog(); resetTimer(); }, 2000);
 }
 
 // ---- HISTORY ----
