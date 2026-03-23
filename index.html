@@ -633,7 +633,16 @@ function closeDialog() {
   document.getElementById('confirm-overlay').classList.remove('show');
 }
 
+let sendDone = false;
+
 async function sendRecord() {
+  if (sendDone) {
+    sendDone = false;
+    closeDialog();
+    resetTimer();
+    return;
+  }
+
   const btn = document.getElementById('dialog-send-btn');
   const status = document.getElementById('dialog-send-status');
   btn.disabled = true;
@@ -644,8 +653,9 @@ async function sendRecord() {
   records.push(rec);
   save(STORAGE_KEYS.records, records);
 
-  // GAS送信
-  if (gasUrl) {
+  // GAS送信（毎回localStorageから再取得）
+  const currentGasUrl = localStorage.getItem(STORAGE_KEYS.gasUrl) || '';
+  if (currentGasUrl) {
     try {
       status.textContent = 'スプレッドシートに書き込み中...';
       const params = new URLSearchParams({
@@ -658,7 +668,7 @@ async function sendRecord() {
         memo: pendingRecord.memo,
         amount: pendingRecord.amount
       });
-      await fetch(gasUrl + '?' + params.toString(), { mode: 'no-cors' });
+      await fetch(currentGasUrl + '?' + params.toString(), { mode: 'no-cors' });
       status.textContent = '✓ スプシに送信しました';
       save(STORAGE_KEYS.records, records);
     } catch(e) {
@@ -668,9 +678,9 @@ async function sendRecord() {
     status.textContent = 'ローカルに保存しました（GAS URL未設定）';
   }
 
+  sendDone = true;
   btn.textContent = '完了 → 閉じる';
   btn.disabled = false;
-  btn.onclick = () => { closeDialog(); resetTimer(); };
 }
 
 // ---- HISTORY ----
